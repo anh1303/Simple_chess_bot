@@ -14,6 +14,17 @@ PIECE_VALUES = {
     chess.KING: 20000
 }
 
+# ================== EVAL CONSTANTS ==================
+
+BISHOP_PAIR_BONUS = 40
+
+DOUBLED_PAWN_PENALTY = 15
+ISOLATED_PAWN_PENALTY = 20
+PASSED_PAWN_BONUS = 25
+
+MOBILITY_WEIGHT = 5
+KING_SHIELD_BONUS = 15
+
 # PST tối giản cho Mã và Tốt để bot có định hướng
 PST = {
     chess.PAWN: [
@@ -45,17 +56,91 @@ class NNBt:
         self.killers = [[None, None] for _ in range(64)]
 
     def evaluate(self, board):
-        if board.is_checkmate(): return -INF
-        
+        if board.is_checkmate():
+            return -INF
+
         score = 0
-        # Tính điểm dựa trên số lượng quân (Rất nhanh)
+
+        # ================= MATERIAL =================
         for pt, val in PIECE_VALUES.items():
             score += len(board.pieces(pt, chess.WHITE)) * val
             score -= len(board.pieces(pt, chess.BLACK)) * val
-        
-        # Chỉ cộng PST cho Mã để bot không đi quẩn (Tốt tính sau nếu cần)
-        for sq in board.pieces(chess.KNIGHT, chess.WHITE): score += PST[chess.KNIGHT][sq]
-        for sq in board.pieces(chess.KNIGHT, chess.BLACK): score -= PST[chess.KNIGHT][sq ^ 56]
+
+        # ================= KNIGHT PST =================
+        for sq in board.pieces(chess.KNIGHT, chess.WHITE):
+            score += PST[chess.KNIGHT][sq]
+        for sq in board.pieces(chess.KNIGHT, chess.BLACK):
+            score -= PST[chess.KNIGHT][sq ^ 56]
+
+        # ================= BISHOP PAIR =================
+        if len(board.pieces(chess.BISHOP, chess.WHITE)) >= 2:
+            score += 35
+        if len(board.pieces(chess.BISHOP, chess.BLACK)) >= 2:
+            score -= 35
+
+        # ================= PAWN STRUCTURE (FAST) =================
+        white_pawns = board.pieces(chess.PAWN, chess.WHITE)
+        black_pawns = board.pieces(chess.PAWN, chess.BLACK)
+
+        white_files = [0]*8
+        black_files = [0]*8
+
+        for sq in white_pawns:
+            white_files[chess.square_file(sq)] += 1
+        for sq in black_pawns:
+            black_files[chess.square_file(sq)] += 1
+
+        # ---- WHITE ----
+        for sq in white_pawns:
+            file = chess.square_file(sq)
+            penalty = 0
+
+            # doubled
+            if white_files[file] > 1:
+                penalty += 12
+
+            # isolated
+            if (file == 0 or white_files[file-1] == 0) and \
+            (file == 7 or white_files[file+1] == 0):
+                penalty += 15
+
+            score -= penalty
+
+        # ---- BLACK ----
+        for sq in black_pawns:
+            file = chess.square_file(sq)
+            penalty = 0
+
+            if black_files[file] > 1:
+                penalty += 12
+
+            if (file == 0 or black_files[file-1] == 0) and \
+            (file == 7 or black_files[file+1] == 0):
+                penalty += 15
+
+            score += penalty
+
+        # ================= KING SAFETY (ULTRA LIGHT) =================
+        for color in [chess.WHITE, chess.BLACK]:
+            king_sq = board.king(color)
+            if king_sq is None:
+                continue
+
+            file = chess.square_file(king_sq)
+            rank = chess.square_rank(king_sq)
+            direction = 1 if color == chess.WHITE else -1
+
+            shield = 0
+            for df in (-1, 0, 1):
+                f = file + df
+                r = rank + direction
+                if 0 <= f <= 7 and 0 <= r <= 7:
+                    sq = chess.square(f, r)
+                    piece = board.piece_at(sq)
+                    if piece and piece.piece_type == chess.PAWN and piece.color == color:
+                        shield += 8
+
+            score += shield if color == chess.WHITE else -shield
 
         return score if board.turn == chess.WHITE else -score
 
