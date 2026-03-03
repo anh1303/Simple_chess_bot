@@ -12,7 +12,7 @@ import json
 import os
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
-from bot2 import NNBt  # Thay bằng class bot của bạn
+from bot_VIP import NNBt  # Thay bằng class bot của bạn
 
 """
 "levels": [
@@ -31,7 +31,7 @@ from bot2 import NNBt  # Thay bằng class bot của bạn
 # CẤU HÌNH - Chỉnh tại đây
 # ──────────────────────────────────────────────
 CONFIG = {
-    "stockfish_path": "stockfish/stockfish-windows-x86-64-avx2.exe",
+    "stockfish_path": "stockfish/stockfish-macos-m1-apple-silicon",
     "model_path": "chess_model.pth",
     "bot_depth": 4,               # Độ sâu minimax của bot
     "matches_per_level": 10,      # Số ván mỗi cấp độ (nên chẵn để xen kẽ màu)
@@ -156,7 +156,8 @@ def play_game(
             is_bot_turn = (board.turn == chess.WHITE) == bot_is_white
 
             if is_bot_turn:
-                move = bot.get_best_move(board, depth=CONFIG["bot_depth"])
+                #move = bot.get_best_move(board, depth=CONFIG["bot_depth"])
+                move = bot.get_best_move(board)
                 if move is None or move not in board.legal_moves:
                     # Bot không tìm được nước đi hợp lệ
                     duration = time.time() - start_time

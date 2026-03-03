@@ -1,6 +1,6 @@
 import pygame
 import chess
-from bot import NNBt
+from bot_VIP import NNBt
 
 # ─────────────────────────────
 # CONFIG

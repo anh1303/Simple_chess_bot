@@ -2,3 +2,4 @@ chess-data.pt
 lichess_db_standard_rated_2015-07.pgn
 \stockfish
 \eval_results
+\env
